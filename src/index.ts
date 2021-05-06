@@ -2,9 +2,31 @@ import { MikroORM } from "@mikro-orm/core";
 import { __prod__ } from "./constants";
 import { Post } from "./entities/Post";
 import mikroConfig from "./mikro-orm.config";
+import express from "express";
+import { ApolloError, ApolloServer } from "apollo-server-express";
+import { buildSchema } from "type-graphql";
+import { HelloResolver } from "./resolvers/hello";
 
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
+
+  const app = express();
+
+  const apolloServer = new ApolloServer({
+    schema: await buildSchema({
+      resolvers: [HelloResolver],
+      validate: false,
+    }),
+  });
+
+  apolloServer.applyMiddleware({ app });
+
+  app.get("/", (_, res) => {
+    res.send("hello");
+  });
+  app.listen(4000, () => {
+    console.log("server started on localhost:4000");
+  });
 
   // 아래의 명령어를 쳐주면은, npx mikro-orm migration:create
   // 이걸 안해도 자동으로 migration을 해준다고 생각하면 된다.
@@ -17,8 +39,8 @@ const main = async () => {
   // 여기까지 해줘야 insert 되는 것임.
   // await orm.em.persistAndFlush(post);
 
-  const posts = await orm.em.find(Post, {});
-  console.log(posts);
+  // const posts = await orm.em.find(Post, {});
+  // console.log(posts);
 };
 
 main().catch((error) => {

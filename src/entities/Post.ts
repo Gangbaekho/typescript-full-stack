@@ -5,12 +5,14 @@ export class Post {
   @PrimaryKey()
   id!: number;
 
-  @Property()
+  @Property({ type: "date" })
   createdAt = new Date();
 
-  @Property({ onUpdate: () => new Date() })
+  @Property({ type: "date", onUpdate: () => new Date() })
   updatedAt = new Date();
 
-  @Property()
+  // type을 따로 써주지 않으면은
+  // varchar(255)가 default로 된다.
+  @Property({ type: "text" })
   title!: string;
 }

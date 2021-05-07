@@ -10,6 +10,7 @@ import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
+import { UserResolver } from "./resolvers/user";
 
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
@@ -18,7 +19,7 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [HelloResolver, PostResolver],
+      resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
     context: () => ({ em: orm.em }),
@@ -36,7 +37,7 @@ const main = async () => {
   // 아래의 명령어를 쳐주면은, npx mikro-orm migration:create
   // 이걸 안해도 자동으로 migration을 해준다고 생각하면 된다.
   // sequelize의 sync와 비슷한것 같다.
-  // await orm.getMigrator().up();
+  await orm.getMigrator().up();
 
   // 이건 그냥 Object만 만드는 것임.
   // 실제 Database에 insert 되는 것은 아니다.

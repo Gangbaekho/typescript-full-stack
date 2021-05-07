@@ -38,18 +38,61 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
-  @Mutation(() => User)
+  @Mutation(() => UserResponse)
   async register(
     @Arg("options") options: UsernamePasswordInput,
     @Ctx() { em }: MyContext
-  ): Promise<User> {
+  ): Promise<UserResponse> {
+    // 이 부분은 validator라는 library를 써서
+    // 하는 것도 나쁘지 않다.
+    if (options.username.length <= 2) {
+      return {
+        errors: [
+          {
+            field: "username",
+            message: "length must be greater than 2",
+          },
+        ],
+      };
+    }
+
+    if (options.password.length <= 3) {
+      return {
+        errors: [
+          {
+            field: "password",
+            message: "length must be greater than 3",
+          },
+        ],
+      };
+    }
+
     const hashedPassword = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
       password: hashedPassword,
     });
-    await em.persistAndFlush(user);
-    return user;
+    try {
+      await em.persistAndFlush(user);
+    } catch (error) {
+      // 이건 좀 더 디테일하게 error message를 분석해서
+      // error handling을 좀 더 디테일하게 처리한 것으로 생각하면 된다.
+      // 무조건 할 필요는 없을 것 같고, 의미있는곳에 적절히 사용하도록 하자.
+      if (
+        (error.sqlState = "23000" || error.sqlMessage.includes("Duplicate"))
+      ) {
+        return {
+          errors: [
+            {
+              field: "username",
+              message: "username alrady taken",
+            },
+          ],
+        };
+      }
+    }
+
+    return { user };
   }
 
   @Mutation(() => UserResponse)

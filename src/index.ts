@@ -12,17 +12,50 @@ import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 
+import redis from "redis";
+import session from "express-session";
+import connectRedis from "connect-redis";
+import { MyContext } from "./types";
+
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
 
   const app = express();
+
+  const RedisStore = connectRedis(session);
+  const redisClient = redis.createClient();
+
+  app.use(
+    session({
+      name: "qid",
+      store: new RedisStore({
+        client: redisClient,
+        // 아래 두 개가 session 정보를
+        // 얼만큼의 시간동안 redis에 넣어놓을 것인지에 대해서 설정하는 것이다.
+        // true만 해놓으면은 default 시간동안 유지될텐데
+        // 그게 얼마인지는 찾아보도록 해야 한다.
+        disableTouch: true,
+      }),
+      cookie: {
+        maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
+        httpOnly: true,
+        sameSite: "lax", // csrf와 관련있다는데, 잘 모르겠다. 나중에 찾아보자.
+        secure: __prod__, // cookie only works in https
+      },
+      // session에 뭔가를 저장할떄만 저장한다는 것임.
+      // empty session는 만들지 않겠다는 말임.
+      saveUninitialized: false,
+      secret: "jalsdjioqhoihdjkansd",
+      resave: false,
+    })
+  );
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: () => ({ em: orm.em }),
+    context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
   });
 
   apolloServer.applyMiddleware({ app });

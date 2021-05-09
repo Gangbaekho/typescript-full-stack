@@ -16,6 +16,7 @@ import redis from "redis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
+import cors from "cors";
 
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
@@ -24,6 +25,17 @@ const main = async () => {
 
   const RedisStore = connectRedis(session);
   const redisClient = redis.createClient();
+
+  // 이렇게 Express 단에서 cors를 처리하거나
+  // 아래 ApolloServer 단에서 해줄 수 있다.
+  // 근데 여기서 하는게 맞는 것 같다.
+  // 더 광범위하게 처리해주는 것 같음.
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true,
+    })
+  );
 
   app.use(
     session({
@@ -58,7 +70,15 @@ const main = async () => {
     context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
   });
 
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({
+    app,
+    // cors 처리를 여기서 해주는거구나.
+    // 이렇게 해줘도 되고, 아예 cors라는 package를 다운받아서 해도 된다.
+    // cors: { origin: "http://localhost:3000" },
+    // 여기에서는 false 처리해주고 Express app 에서
+    // cors package를 쓰는 방법을 사용했다. 참고하도록 하자.
+    cors: false,
+  });
 
   app.get("/", (_, res) => {
     res.send("hello");

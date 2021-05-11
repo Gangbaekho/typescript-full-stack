@@ -2,7 +2,7 @@
 // 이게 필요하다네 뭔지는 잘 모르겠찌만.
 import "reflect-metadata";
 import { MikroORM } from "@mikro-orm/core";
-import { __prod__ } from "./constants";
+import { COOKIE_NAME, __prod__ } from "./constants";
 
 import mikroConfig from "./mikro-orm.config";
 import express from "express";
@@ -39,7 +39,7 @@ const main = async () => {
 
   app.use(
     session({
-      name: "qid",
+      name: COOKIE_NAME,
       store: new RedisStore({
         client: redisClient,
         // 아래 두 개가 session 정보를

@@ -21,6 +21,10 @@ export class User {
   @Property({ unique: true })
   username!: string;
 
+  @Field(() => String)
+  @Property({ type: "text", unique: true, nullable: true })
+  email!: string;
+
   // password는 graphql의 field로 넣지 않는 것을
   // 주목하길 바람. password를 보여줄 필요가 없기 떄문이다.
   @Property()

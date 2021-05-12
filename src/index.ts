@@ -12,7 +12,10 @@ import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 
-import redis from "redis";
+// import redis from "redis";
+// redis 대신에 ioredis를 쓴다는건데 무슨 차이점이 있는지는
+// 검색을 좀 해봐야 할 것 같다.
+import Redis from "ioredis";
 import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
@@ -25,7 +28,8 @@ const main = async () => {
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redisClient = redis.createClient();
+  // const redisClient = redis.createClient();
+  const redis = new Redis();
 
   // 이렇게 Express 단에서 cors를 처리하거나
   // 아래 ApolloServer 단에서 해줄 수 있다.
@@ -42,7 +46,7 @@ const main = async () => {
     session({
       name: COOKIE_NAME,
       store: new RedisStore({
-        client: redisClient,
+        client: redis,
         // 아래 두 개가 session 정보를
         // 얼만큼의 시간동안 redis에 넣어놓을 것인지에 대해서 설정하는 것이다.
         // true만 해놓으면은 default 시간동안 유지될텐데
@@ -68,7 +72,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
+    context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis }),
   });
 
   apolloServer.applyMiddleware({

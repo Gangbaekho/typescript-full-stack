@@ -1,16 +1,17 @@
 // type-graphql이 돌아가려면은
 // 이게 필요하다네 뭔지는 잘 모르겠찌만.
 import "reflect-metadata";
-import { MikroORM } from "@mikro-orm/core";
+// import { MikroORM } from "@mikro-orm/core";
 import { COOKIE_NAME, __prod__ } from "./constants";
 
-import mikroConfig from "./mikro-orm.config";
+// import mikroConfig from "./mikro-orm.config";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
 import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
+import { createConnection } from "typeorm";
 
 // import redis from "redis";
 // redis 대신에 ioredis를 쓴다는건데 무슨 차이점이 있는지는
@@ -20,10 +21,24 @@ import session from "express-session";
 import connectRedis from "connect-redis";
 import { MyContext } from "./types";
 import cors from "cors";
+import { Post } from "./entities/Post";
+import { User } from "./entities/User";
 
 const main = async () => {
+  const conn = await createConnection({
+    type: "mysql",
+    database: "lireddit2",
+    username: "jinsoo",
+    password: "jinsoo",
+    logging: true,
+    // 이게 sequelize의 sync랑 같은거라고 보면 된다.
+    // 자동으로 DDL 해주는 것 같다.
+    synchronize: true,
+    entities: [Post, User],
+  });
+
   // sendEmail("bob@bob.com", "hello there");
-  const orm = await MikroORM.init(mikroConfig);
+  // const orm = await MikroORM.init(mikroConfig);
 
   const app = express();
 
@@ -72,7 +87,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis }),
+    context: ({ req, res }): MyContext => ({ req, res, redis }),
   });
 
   apolloServer.applyMiddleware({
@@ -95,7 +110,7 @@ const main = async () => {
   // 아래의 명령어를 쳐주면은, npx mikro-orm migration:create
   // 이걸 안해도 자동으로 migration을 해준다고 생각하면 된다.
   // sequelize의 sync와 비슷한것 같다.
-  await orm.getMigrator().up();
+  // await orm.getMigrator().up();
 
   // 이건 그냥 Object만 만드는 것임.
   // 실제 Database에 insert 되는 것은 아니다.

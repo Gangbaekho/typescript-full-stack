@@ -1,5 +1,23 @@
 import { Post } from "../entities/Post";
-import { Arg, Int, Mutation, Query, Resolver } from "type-graphql";
+import {
+  Arg,
+  Ctx,
+  Field,
+  InputType,
+  Int,
+  Mutation,
+  Query,
+  Resolver,
+} from "type-graphql";
+import { MyContext } from "src/types";
+
+@InputType()
+class PostInput {
+  @Field()
+  title: string;
+  @Field()
+  text: string;
+}
 
 @Resolver()
 export class PostResolver {
@@ -26,10 +44,25 @@ export class PostResolver {
   }
 
   @Mutation(() => Post)
-  async createPost(@Arg("title", () => String) title: string): Promise<Post> {
+  async createPost(
+    @Arg("input") input: PostInput,
+    @Ctx() { req }: MyContext
+  ): Promise<Post> {
     // 근데 문제가 되는건 이게 2 sql queries라는 것이다.
     // insert -> select
-    return await Post.create({ title }).save();
+
+    // 이걸로 session을 체크해서
+    // authenticated 되지 않았으면은 error를 throw하면 되는데
+    // 문제는 매번이 코드를 써야한다는 거임. 중복된다.
+    // type-graphql에서 이 문제를 middleware로 해결해준다네
+    if (!req.session.userId) {
+      throw new Error("not authenticated");
+    }
+
+    return await Post.create({
+      ...input,
+      creatorId: req.session.userId,
+    }).save();
     // const post = em.create(Post, { title });
     // await em.persistAndFlush(post);
     // return post;

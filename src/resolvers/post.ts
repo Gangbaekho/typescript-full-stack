@@ -8,8 +8,11 @@ import {
   Mutation,
   Query,
   Resolver,
+  UseMiddleware,
 } from "type-graphql";
 import { MyContext } from "src/types";
+import { isAuth } from "../middleware/isAuth";
+import { getConnection } from "typeorm";
 
 @InputType()
 class PostInput {
@@ -25,9 +28,24 @@ export class PostResolver {
   // Post는 Entity class이지
   // GraphQL의 type은 아니라서 쓸 수 없게 된다는 것이다.
   @Query(() => [Post])
-  async posts(): Promise<Post[]> {
+  async posts(
+    @Arg("limit") limit: number,
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null
+  ): Promise<Post[]> {
     // Typeorm은 그냥 바로 가져와서 사용하는구나.
-    return await Post.find();
+    // return await Post.find();
+
+    // 이건 query Builder를 이용하는 방법인데
+    // raw한 query를 쓸 때 쓰는것으로 생각이 된다.
+    return (
+      getConnection()
+        .getRepository(Post)
+        // "p는 alias를 말하는 것 같다."
+        .createQueryBuilder("p")
+        .where("")
+        .orderBy('"createdAt"', "DESC")
+        .getMany()
+    );
   }
 
   // Query 역시나 GraphQL에 관한 것이고
@@ -44,6 +62,7 @@ export class PostResolver {
   }
 
   @Mutation(() => Post)
+  @UseMiddleware(isAuth)
   async createPost(
     @Arg("input") input: PostInput,
     @Ctx() { req }: MyContext
@@ -55,9 +74,11 @@ export class PostResolver {
     // authenticated 되지 않았으면은 error를 throw하면 되는데
     // 문제는 매번이 코드를 써야한다는 거임. 중복된다.
     // type-graphql에서 이 문제를 middleware로 해결해준다네
-    if (!req.session.userId) {
-      throw new Error("not authenticated");
-    }
+    // @UseMiddleware로 이 문제를 해결하고 있음.
+    // 그래서 지운다.
+    // if (!req.session.userId) {
+    //   throw new Error("not authenticated");
+    // }
 
     return await Post.create({
       ...input,

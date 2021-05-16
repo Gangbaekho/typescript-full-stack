@@ -3,11 +3,13 @@ import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   InputType,
   Int,
   Mutation,
   Query,
   Resolver,
+  Root,
   UseMiddleware,
 } from "type-graphql";
 import { MyContext } from "src/types";
@@ -22,14 +24,22 @@ class PostInput {
   text: string;
 }
 
-@Resolver()
+@Resolver(Post)
 export class PostResolver {
+  // 내가 sub resolver로 알고 있던 그거구나.
+  // textSnippet이라는 field를 아예 만들어주는구나
+  // text와 textSnippet이 동시에 존재함.
+  @FieldResolver(() => String)
+  textSnippet(@Root() root: Post) {
+    return root.text.slice(0, 50);
+  }
+
   // 여기서 문제가 발생하는데,
   // Post는 Entity class이지
   // GraphQL의 type은 아니라서 쓸 수 없게 된다는 것이다.
   @Query(() => [Post])
   async posts(
-    @Arg("limit") limit: number,
+    @Arg("limit", () => Int) limit: number,
     @Arg("cursor", () => String, { nullable: true }) cursor: string | null
   ): Promise<Post[]> {
     // Typeorm은 그냥 바로 가져와서 사용하는구나.

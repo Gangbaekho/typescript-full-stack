@@ -37,15 +37,18 @@ export class PostResolver {
 
     // 이건 query Builder를 이용하는 방법인데
     // raw한 query를 쓸 때 쓰는것으로 생각이 된다.
-    return (
-      getConnection()
-        .getRepository(Post)
-        // "p는 alias를 말하는 것 같다."
-        .createQueryBuilder("p")
-        .where("")
-        .orderBy('"createdAt"', "DESC")
-        .getMany()
-    );
+    const realLimit = Math.min(50, limit);
+    const qb = getConnection()
+      .getRepository(Post)
+      // "p는 alias를 말하는 것 같다."
+      .createQueryBuilder("p")
+      .orderBy('"createdAt"', "DESC")
+      .take(realLimit);
+    if (cursor) {
+      qb.where('"createdAt" < :cursor', { cursor: new Date(parseInt(cursor)) });
+    }
+
+    return qb.getMany();
   }
 
   // Query 역시나 GraphQL에 관한 것이고
